@@ -22,4 +22,16 @@ class RawMessage(BaseModel):
     timestamp: AwareDatetime
     text: str
     subject: str | None = None
-    
+
+class EventAction(str,Enum):
+    CREATE = "create"
+    UPDATE = "update"
+    CANCEL = "cancel"
+
+class TaskEvent(BaseModel):
+    action: EventAction
+    title: str
+    subject: str | None = None
+    task_type: TaskType = TaskType.OTHER
+    source_message_id: str
+    evidence: str
