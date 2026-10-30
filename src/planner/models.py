@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, AwareDatetime
+from pydantic import BaseModel, AwareDatetime, model_validator
 
 class Source(str, Enum):
     GMAIL = "gmail"
@@ -35,3 +35,11 @@ class TaskEvent(BaseModel):
     task_type: TaskType = TaskType.OTHER
     source_message_id: str
     evidence: str
+    deadline: AwareDatetime | None = None
+    deadline_text: str | None = None
+    @model_validator(mode="after")
+    def deadline_needs_text(self):
+        if(self.deadline):
+            if(self.deadline_text is None):
+                raise ValueError("deadline was given without deadline_text")
+        return self

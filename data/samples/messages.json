@@ -1,0 +1,68 @@
+[
+  {
+    "id": "s1",
+    "source": "gmail",
+    "source_ref": "sample-email-1",
+    "sender": "prof.sharma@college.edu",
+    "timestamp": "2026-10-27T10:00:00+05:30",
+    "subject": "DBMS Assignment 2",
+    "text": "Dear students, please submit Assignment 2 on normalization on the college portal by 2 November, 11:59 PM. Late submissions will not be accepted."
+  },
+  {
+    "id": "s2",
+    "source": "whatsapp",
+    "source_ref": "CSE-3A-group:line-118",
+    "sender": "Rohan (CR)",
+    "timestamp": "2026-10-29T21:15:00+05:30",
+    "text": "Guys OS lab file kal tak submit karni hai, sir ne bola hai portal pe upload kar dena. Late wale ko marks katenge"
+  },
+  {
+    "id": "s3",
+    "source": "whatsapp",
+    "source_ref": "CSE-3A-group:line-95",
+    "sender": "Ananya",
+    "timestamp": "2026-10-29T18:40:00+05:30",
+    "text": "CN assignment jaldi submit kar dena sabko, sir ne bola hai"
+  },
+  {
+    "id": "s4",
+    "source": "whatsapp",
+    "source_ref": "CSE-3A-group:line-71",
+    "sender": "Karan",
+    "timestamp": "2026-10-29T09:05:00+05:30",
+    "text": "Good morning everyone 🌞 canteen ka naya menu dekha? Samosa ab 15 ka ho gaya 😂"
+  },
+  {
+    "id": "s5",
+    "source": "whatsapp",
+    "source_ref": "CSE-3A-group:line-131",
+    "sender": "Rohan (CR)",
+    "timestamp": "2026-10-30T09:30:00+05:30",
+    "text": "DBMS Assignment 2 ki deadline extend ho gayi hai, ab 4 November tak submit kar sakte ho"
+  },
+  {
+    "id": "s6",
+    "source": "gmail",
+    "source_ref": "sample-email-2",
+    "sender": "prof.verma@college.edu",
+    "timestamp": "2026-10-28T14:20:00+05:30",
+    "subject": "Operating Systems Quiz 2",
+    "text": "Quiz 2 for Operating Systems will be held on 5 November at 10:00 AM in Room 204. Syllabus: Unit 3 and Unit 4. Please bring your ID cards."
+  },
+  {
+    "id": "s7",
+    "source": "whatsapp",
+    "source_ref": "CSE-batch-main:line-402",
+    "sender": "Priya",
+    "timestamp": "2026-10-28T16:45:00+05:30",
+    "text": "Forwarded: Dear students, please submit Assignment 2 on normalization on the college portal by 2 November, 11:59 PM. Late submissions will not be accepted."
+  },
+  {
+    "id": "s8",
+    "source": "whatsapp",
+    "source_ref": "CSE-3A-group:line-134",
+    "sender": "Rohan (CR)",
+    "timestamp": "2026-10-30T10:15:00+05:30",
+    "text": "OS quiz jo 5 Nov ko thi wo cancel ho gayi hai, new date baad mein bataenge"
+  }
+]
