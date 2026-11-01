@@ -1,4 +1,5 @@
-from planner.models import RawMessage
+import json
+from planner.models import RawMessage, TaskEvent
 
 SYSTEM_PROMPT = """You extract academic tasks from college messages (emails and WhatsApp, often Hinglish).
 
@@ -11,6 +12,7 @@ Rules:
 - NEVER guess a deadline. If the message gives none, deadline and deadline_text must both be null.
 - If it gives one, deadline_text is the exact words used, and deadline is that moment in ISO format, worked out from the message's sent time (for example "kal" means the day after it was sent). If only a date is given with no time, use 23:59.
 - evidence must be copied word for word from the message.
+- title is the course, the kind of task and its number if given, e.g. "DBMS Assignment 2" or "OS Quiz 2". Never put the topic in the title. A later message about the same task should produce the same title.
 - All times are IST (+05:30)."""
 
 def build_user_prompt(msg:RawMessage)->str:
@@ -23,3 +25,13 @@ def build_user_prompt(msg:RawMessage)->str:
         lines.append(f"Subject: {msg.subject}")
     lines.append(f"Message: {msg.text}")
     return "\n".join(lines)
+
+def parse_events(raw: str, msg:RawMessage)->list[TaskEvent]:
+    data = json.loads(raw)
+    events = data["events"]
+    result = []
+    for event in events:
+        task = TaskEvent(**event, source_message_id=msg.id)
+        result.append(task)
+
+    return result
