@@ -1,5 +1,6 @@
 from planner.models import RawMessage, TaskEvent
 from planner.intelligence.validate import evidence_in_message
+from datetime import timedelta
 
 MSG = RawMessage(
     id="s1", source="sample", source_ref="t", sender="t",
