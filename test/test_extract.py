@@ -1,5 +1,6 @@
 from planner.models import RawMessage, EventAction
 from planner.intelligence.extract import parse_events
+import pytest
 
 MSG = RawMessage(
     id="s1", source="sample", source_ref="t", sender="t",
@@ -20,3 +21,12 @@ def test_parses_one_event():
 
 def test_empty_events():
     assert parse_events('{"events": []}', MSG) == []
+
+def test_json_wrapped_in_markdown_fences():
+    wrapped = "```json\n" + GOOD + "\n```"
+    assert len(parse_events(wrapped, MSG)) == 1
+
+
+def test_garbage_raises_value_error():
+    with pytest.raises(ValueError):
+        parse_events("sorry, I can't help with that", MSG)

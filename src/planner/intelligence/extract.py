@@ -27,8 +27,14 @@ def build_user_prompt(msg:RawMessage)->str:
     return "\n".join(lines)
 
 def parse_events(raw: str, msg:RawMessage)->list[TaskEvent]:
-    data = json.loads(raw)
-    events = data["events"]
+    try:
+        start = raw.find("{")
+        end = raw.rfind("}") + 1
+        data = json.loads(raw[start:end])
+        # data = json.loads(raw)
+        events = data["events"]
+    except:
+        raise ValueError(f"Model did not return valid JSON: {raw[:100]}")
     result = []
     for event in events:
         task = TaskEvent(**event, source_message_id=msg.id)
