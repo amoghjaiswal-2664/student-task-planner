@@ -60,3 +60,16 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.ACTIVE
     estimated_effort_hours: float = Field(default=2.0, gt=0)
     source_message_ids: list[str] = Field(default_factory=list)
+
+class DecisionAction(str, Enum):
+    CREATE = "create"
+    UPDATE = "update"
+    CANCEL = "cancel"
+    DUPLICATE = "duplicate"
+    NEEDS_REVIEW = "needs_review"
+
+class Decision(BaseModel):
+    action: DecisionAction
+    event: TaskEvent
+    task_id: int | None = None
+    reason: str 
