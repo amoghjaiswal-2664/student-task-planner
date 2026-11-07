@@ -73,3 +73,8 @@ class Decision(BaseModel):
     event: TaskEvent
     task_id: int | None = None
     reason: str 
+
+class RankedTask(BaseModel):
+    task: Task
+    score: float
+    reasons: list[str]

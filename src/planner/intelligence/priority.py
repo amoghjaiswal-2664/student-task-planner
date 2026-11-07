@@ -1,5 +1,5 @@
 from datetime import datetime
-from planner.models import Task, TaskType
+from planner.models import Task, TaskType, RankedTask, TaskStatus
 
 IMPORTANCE = {
     TaskType.EXAM: 30,
@@ -59,3 +59,14 @@ def score_task(task: Task, now: datetime) -> tuple[float, list[str]]:
     reasons.append(f"estimated effort of {effort} hours (+{effort})")
 
     return urgency + importance + effort, reasons
+
+def rank_tasks(tasks: list[Task], now: datetime) -> list[RankedTask]:
+    
+    ranked_tasks = []
+    for task in tasks:
+        if task.status != TaskStatus.ACTIVE:
+            continue
+        score, reasons = score_task(task, now)
+        ranked_tasks.append(RankedTask(task=task, score=score, reasons=reasons))
+    return   sorted(ranked_tasks, key=lambda r: (-r.score, r.task.deadline is None, r.task.deadline, r.task.title))
+    # return ranked_tasks
