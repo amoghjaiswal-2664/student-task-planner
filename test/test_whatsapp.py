@@ -1,5 +1,7 @@
 from planner.models import Source
-from planner.sources.whatsapp import parse_whatsapp_export
+# from planner.sources.whatsapp import parse_whatsapp_export
+from datetime import datetime
+from planner.sources.whatsapp import IST, load_whatsapp_file, parse_whatsapp_export
 
 GROUP = "CSE-3A"
 
@@ -89,3 +91,11 @@ def test_ids_ignore_line_numbers():
 
 def test_empty_input():
     assert parse("") == []
+
+def test_since_filters_older_messages(tmp_path):
+    f = tmp_path / "chat.txt"
+    f.write_text(CHAT, encoding="utf-8")
+    since = datetime(2026, 11, 5, tzinfo=IST)
+    msgs = load_whatsapp_file(str(f), GROUP, since=since)
+    assert len(msgs) == 3
+    assert all(m.timestamp >= since for m in msgs)

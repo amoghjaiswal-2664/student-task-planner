@@ -1,6 +1,6 @@
+from datetime import datetime, timedelta, timezone
 import hashlib
 import re
-from datetime import datetime, timedelta, timezone
 
 from planner.models import RawMessage, Source
 
@@ -63,6 +63,9 @@ def parse_whatsapp_export(text: str, group: str, tz=IST) -> list[RawMessage]:
     return messages
 
 
-def load_whatsapp_file(path: str, group: str) -> list[RawMessage]:
+def load_whatsapp_file(path: str, group: str, since: datetime | None = None) -> list[RawMessage]:
     with open(path, encoding="utf-8-sig") as f:
-        return parse_whatsapp_export(f.read(), group)
+        messages = parse_whatsapp_export(f.read(), group)
+    if since is not None:
+        messages = [m for m in messages if m.timestamp >= since]
+    return messages
