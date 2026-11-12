@@ -1,6 +1,24 @@
 import re
 from planner.models import Decision, DecisionAction, EventAction, Task, TaskEvent, TaskStatus
 
+GENERIC_WORDS = {
+    "assignment", "quiz", "test", "exam", "lab", "experiment", "project",
+    "form", "slip", "class", "session", "submission", "feedback",
+    "the", "a", "an", "of", "on", "for", "and", "to",
+}
+
+ALIASES = {"de": "digital electronics"}
+
+
+def expand_aliases(text: str) -> str:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return " ".join(ALIASES.get(w, w) for w in words)
+
+
+def topic_words(title: str) -> set[str]:
+    words = re.findall(r"[a-z]+", expand_aliases(title))
+    return set(words) - GENERIC_WORDS
+
 
 def title_number(title: str) -> int | None:
     numbers = re.findall(r"\d+", title)
@@ -11,19 +29,23 @@ def title_number(title: str) -> int | None:
 
 def find_candidates(event: TaskEvent, tasks: list[Task]) -> list[Task]:
     candidates = []
+    event_topics = topic_words(event.title)
+    event_no = title_number(event.title)
     for task in tasks:
         if task.status != TaskStatus.ACTIVE:
             continue
         if event.task_type != task.task_type:
             continue
-        if event.subject and task.subject and event.subject.lower() != task.subject.lower():
+        if event.subject and task.subject and expand_aliases(event.subject) != expand_aliases(task.subject):
             continue
-        event_no = title_number(event.title)
         task_no = title_number(task.title)
         if event_no is not None and task_no is not None and event_no != task_no:
             continue
+        task_topics = topic_words(task.title)
+        if event_topics and task_topics and event_topics.isdisjoint(task_topics):
+            continue
         candidates.append(task)
-    return candidates   
+    return candidates
 def decide(event: TaskEvent, tasks: list[Task]) -> Decision:
     candidates = find_candidates(event, tasks)
 
