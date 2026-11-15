@@ -78,3 +78,8 @@ class RankedTask(BaseModel):
     task: Task
     score: float
     reasons: list[str]
+
+class ReviewItem(BaseModel):
+    id: int
+    decision: Decision
+    status: str = "pending"

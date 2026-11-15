@@ -1,6 +1,8 @@
+import hashlib
 import json
 import sqlite3
-from planner.models import RawMessage, Task
+from planner.models import RawMessage, Task, Decision, ReviewItem
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS messages (
@@ -25,6 +27,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     estimated_effort_hours REAL NOT NULL,
     source_message_ids TEXT NOT NULL
 )
+
+"""
+REVIEW_SCHEMA = """
+CREATE TABLE IF NOT EXISTS review_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    decision_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+)
 """
 
 TASK_COLUMNS = (
@@ -40,8 +51,8 @@ def connect(path: str = "planner.db") -> sqlite3.Connection:
 def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(SCHEMA)
     conn.execute(TASKS_SCHEMA)
+    conn.execute(REVIEW_SCHEMA)
     conn.commit()
-
 
 def save_message(conn: sqlite3.Connection, msg: RawMessage) -> bool:
     cursor = conn.execute(
@@ -141,4 +152,33 @@ def update_task(conn: sqlite3.Connection, task: Task) -> None:
         "source_message_ids = ? WHERE id = ?",
         _task_values(task) + (task.id,),
     )
+    conn.commit()
+def add_review_item(conn: sqlite3.Connection, decision: Decision) -> bool:
+    text = decision.model_dump_json()
+    key = hashlib.sha1(text.encode("utf-8")).hexdigest()
+    cursor = conn.execute(
+        "INSERT OR IGNORE INTO review_items (key, decision_json) VALUES (?, ?)",
+        (key, text),
+    )
+    conn.commit()
+    return cursor.rowcount == 1
+
+
+def list_review_items(conn: sqlite3.Connection, status: str = "pending") -> list[ReviewItem]:
+    rows = conn.execute(
+        "SELECT id, decision_json, status FROM review_items WHERE status = ? ORDER BY id",
+        (status,),
+    ).fetchall()
+    return [
+        ReviewItem(
+            id=row[0],
+            decision=Decision.model_validate_json(row[1]),
+            status=row[2],
+        )
+        for row in rows
+    ]
+
+
+def resolve_review_item(conn: sqlite3.Connection, item_id: int) -> None:
+    conn.execute("UPDATE review_items SET status = 'resolved' WHERE id = ?", (item_id,))
     conn.commit()

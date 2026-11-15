@@ -1,8 +1,7 @@
-from planner.models import Source
+from planner.models import Source, RawMessage
 # from planner.sources.whatsapp import parse_whatsapp_export
 from datetime import datetime
-from planner.sources.whatsapp import IST, load_whatsapp_file, parse_whatsapp_export
-
+from planner.sources.whatsapp import IST, load_whatsapp_file, parse_whatsapp_export, merge_bursts
 GROUP = "CSE-3A"
 
 CHAT = (
@@ -99,3 +98,79 @@ def test_since_filters_older_messages(tmp_path):
     msgs = load_whatsapp_file(str(f), GROUP, since=since)
     assert len(msgs) == 3
     assert all(m.timestamp >= since for m in msgs)
+def burst_msg(id, ts, sender="A", text="x"):
+    return RawMessage(
+        id=id, source="whatsapp", source_ref=f"g:line-{id}",
+        sender=sender, timestamp=ts, text=text,
+    )
+
+
+def test_close_messages_from_same_sender_merge():
+    a = burst_msg("1", "2026-11-05T11:32:46+05:30", text="about Test-2")
+    b = burst_msg("2", "2026-11-05T11:37:26+05:30", text="Start Time")
+    merged = merge_bursts([a, b])
+    assert len(merged) == 1
+    assert merged[0].text == "about Test-2\nStart Time"
+    assert merged[0].timestamp == a.timestamp
+    assert merged[0].sender == "A"
+    assert merged[0].source_ref == "g:line-1+1 more"
+
+
+def test_large_gap_does_not_merge():
+    a = burst_msg("1", "2026-11-05T11:00:00+05:30")
+    b = burst_msg("2", "2026-11-05T11:15:00+05:30")
+    assert len(merge_bursts([a, b])) == 2
+
+
+def test_other_sender_in_between_breaks_the_burst():
+    a = burst_msg("1", "2026-11-05T11:00:00+05:30", "A")
+    b = burst_msg("2", "2026-11-05T11:01:00+05:30", "B")
+    c = burst_msg("3", "2026-11-05T11:02:00+05:30", "A")
+    assert len(merge_bursts([a, b, c])) == 3
+
+
+def test_chain_of_close_messages_is_one_burst():
+    msgs = [
+        burst_msg("1", "2026-11-05T11:00:00+05:30", text="one"),
+        burst_msg("2", "2026-11-05T11:08:00+05:30", text="two"),
+        burst_msg("3", "2026-11-05T11:16:00+05:30", text="three"),
+    ]
+    merged = merge_bursts(msgs)
+    assert len(merged) == 1
+    assert merged[0].text == "one\ntwo\nthree"
+
+
+def test_single_message_is_unchanged():
+    a = burst_msg("1", "2026-11-05T11:00:00+05:30")
+    assert merge_bursts([a]) == [a]
+
+
+def test_merged_id_is_stable_and_new():
+    a = burst_msg("1", "2026-11-05T11:00:00+05:30")
+    b = burst_msg("2", "2026-11-05T11:01:00+05:30")
+    first, second = merge_bursts([a, b]), merge_bursts([a, b])
+    assert first[0].id == second[0].id
+    assert first[0].id not in ("1", "2")
+
+
+def test_empty_input():
+    assert merge_bursts([]) == []
+
+
+def test_unsorted_input_is_sorted_first():
+    a = burst_msg("1", "2026-11-05T11:00:00+05:30", text="first")
+    b = burst_msg("2", "2026-11-05T11:01:00+05:30", text="second")
+    assert merge_bursts([b, a])[0].text == "first\nsecond"
+
+
+def test_loader_merges_bursts_by_default(tmp_path):
+    chat = (
+        "[11/5/26, 11:32:46 AM] A: Students who have not attempted Test-2\n"
+        "[11/5/26, 11:37:26 AM] A: Start Time\n"
+        "2026-11-04 15:00\n"
+        "[11/5/26, 12:30:00 PM] A: unrelated later message\n"
+    )
+    f = tmp_path / "chat.txt"
+    f.write_text(chat, encoding="utf-8")
+    assert len(load_whatsapp_file(str(f), "G")) == 2
+    assert len(load_whatsapp_file(str(f), "G", merge_gap_minutes=None)) == 3

@@ -1,10 +1,10 @@
 import sqlite3
 from pydantic import BaseModel, Field
-from planner.models import Decision, RawMessage
+from planner.models import Decision, RawMessage, DecisionAction
 from planner.intelligence.llm import complete
 from planner.intelligence.analyze import analyze_message
 from planner.intelligence.matching import decide
-from planner.storage import get_message, save_message, list_tasks
+from planner.storage import get_message, save_message, list_tasks, add_review_item
 from planner.apply import apply_decision
 
 
@@ -28,6 +28,8 @@ def sync_messages(conn: sqlite3.Connection, messages: list[RawMessage], llm=comp
         for event in events:
             decision = decide(event, list_tasks(conn))
             apply_decision(conn, decision)
+            if decision.action == DecisionAction.NEEDS_REVIEW:
+                add_review_item(conn, decision)
             summary.decisions.append(decision)
         save_message(conn, msg)
         summary.messages_processed += 1

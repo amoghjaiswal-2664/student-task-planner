@@ -63,9 +63,42 @@ def parse_whatsapp_export(text: str, group: str, tz=IST) -> list[RawMessage]:
     return messages
 
 
-def load_whatsapp_file(path: str, group: str, since: datetime | None = None) -> list[RawMessage]:
+def load_whatsapp_file(path: str, group: str, since: datetime | None = None, merge_gap_minutes: int | None = 10,) -> list[RawMessage]:
     with open(path, encoding="utf-8-sig") as f:
         messages = parse_whatsapp_export(f.read(), group)
+    if merge_gap_minutes is not None:
+        messages = merge_bursts(messages, gap_minutes=merge_gap_minutes)
     if since is not None:
         messages = [m for m in messages if m.timestamp >= since]
     return messages
+
+def merge_bursts(messages: list[RawMessage], gap_minutes: int = 10) -> list[RawMessage]:
+    gap = timedelta(minutes = gap_minutes)
+    bursts: list[list[RawMessage]] = []
+    for msg in sorted(messages, key=lambda m: m.timestamp):
+        if(
+            bursts
+            and msg.sender == bursts[-1][-1].sender
+            and msg.timestamp - bursts[-1][-1].timestamp <= gap
+        ):
+            bursts[-1].append(msg)
+        else:
+            bursts.append([msg])
+    merged = []
+    for burst in bursts:
+        if len(burst) == 1:
+            merged.append(burst[0])
+            continue
+        first = burst[0]
+        ids = "|".join(m.id for m in burst)
+        merged.append(
+            RawMessage(
+                id=f"{first.id}-burst-{hashlib.sha1(ids.encode('utf-8')).hexdigest()[:16]}",
+                source=first.source,
+                source_ref=f"{first.source_ref}+{len(burst)-1} more",
+                sender=first.sender,
+                timestamp=first.timestamp,
+                text="\n".join(m.text for m in burst),
+            )
+        )
+    return merged    

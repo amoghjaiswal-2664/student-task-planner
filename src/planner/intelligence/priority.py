@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from planner.models import Task, TaskType, RankedTask, TaskStatus
 
 IMPORTANCE = {
@@ -8,6 +8,14 @@ IMPORTANCE = {
     TaskType.ONLINE_CLASS: 10,
     TaskType.OTHER: 5,
 }
+
+STALE_AFTER = timedelta(days=7)
+
+def is_stale(task: Task, now: datetime) -> bool:
+    if task.deadline is None:
+        return False
+    return now-task.deadline > STALE_AFTER
+
 
 
 def score_task(task: Task, now: datetime) -> tuple[float, list[str]]:
