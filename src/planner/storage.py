@@ -1,8 +1,8 @@
 import hashlib
 import json
 import sqlite3
-from planner.models import RawMessage, Task, Decision, ReviewItem
 
+from planner.models import Decision, RawMessage, ReviewItem, Task
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS messages (
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS messages (
     text TEXT NOT NULL
 )
 """
+
 TASKS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,11 +25,10 @@ CREATE TABLE IF NOT EXISTS tasks (
     deadline TEXT,
     deadline_text TEXT,
     status TEXT NOT NULL,
-    estimated_effort_hours REAL NOT NULL,
     source_message_ids TEXT NOT NULL
 )
-
 """
+
 REVIEW_SCHEMA = """
 CREATE TABLE IF NOT EXISTS review_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS review_items (
 
 TASK_COLUMNS = (
     "id, title, subject, task_type, deadline, deadline_text, "
-    "status, estimated_effort_hours, source_message_ids"
+    "status, source_message_ids"
 )
 
 
@@ -53,6 +53,9 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(TASKS_SCHEMA)
     conn.execute(REVIEW_SCHEMA)
     conn.commit()
+
+
+# ---------- messages ----------
 
 def save_message(conn: sqlite3.Connection, msg: RawMessage) -> bool:
     cursor = conn.execute(
@@ -95,6 +98,9 @@ def get_message(conn: sqlite3.Connection, message_id: str) -> RawMessage | None:
 def count_messages(conn: sqlite3.Connection) -> int:
     return conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
 
+
+# ---------- tasks ----------
+
 def _task_values(task: Task) -> tuple:
     return (
         task.title,
@@ -103,7 +109,6 @@ def _task_values(task: Task) -> tuple:
         task.deadline.isoformat() if task.deadline else None,
         task.deadline_text,
         task.status.value,
-        task.estimated_effort_hours,
         json.dumps(task.source_message_ids),
     )
 
@@ -117,16 +122,14 @@ def _row_to_task(row) -> Task:
         deadline=row[4],
         deadline_text=row[5],
         status=row[6],
-        estimated_effort_hours=row[7],
-        source_message_ids=json.loads(row[8]),
+        source_message_ids=json.loads(row[7]),
     )
 
 
 def add_task(conn: sqlite3.Connection, task: Task) -> Task:
     cursor = conn.execute(
         "INSERT INTO tasks (title, subject, task_type, deadline, deadline_text, "
-        "status, estimated_effort_hours, source_message_ids) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "status, source_message_ids) VALUES (?, ?, ?, ?, ?, ?, ?)",
         _task_values(task),
     )
     conn.commit()
@@ -148,11 +151,14 @@ def list_tasks(conn: sqlite3.Connection) -> list[Task]:
 def update_task(conn: sqlite3.Connection, task: Task) -> None:
     conn.execute(
         "UPDATE tasks SET title = ?, subject = ?, task_type = ?, deadline = ?, "
-        "deadline_text = ?, status = ?, estimated_effort_hours = ?, "
-        "source_message_ids = ? WHERE id = ?",
+        "deadline_text = ?, status = ?, source_message_ids = ? WHERE id = ?",
         _task_values(task) + (task.id,),
     )
     conn.commit()
+
+
+# ---------- review queue ----------
+
 def add_review_item(conn: sqlite3.Connection, decision: Decision) -> bool:
     text = decision.model_dump_json()
     key = hashlib.sha1(text.encode("utf-8")).hexdigest()

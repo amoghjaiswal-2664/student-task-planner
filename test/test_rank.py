@@ -40,7 +40,7 @@ def test_tie_without_deadlines_uses_title():
 
 def test_each_result_has_reasons():
     ranked = rank_tasks([task("x", "exam", 5)], NOW)
-    assert len(ranked[0].reasons) == 3
+    assert len(ranked[0].reasons) == 2
     assert ranked[0].score > 0
 
 

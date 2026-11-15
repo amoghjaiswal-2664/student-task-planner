@@ -27,7 +27,7 @@ def score_task(task: Task, now: datetime) -> tuple[float, list[str]]:
     Returns:
         A tuple containing:
         - Priority score
-        - Exactly three explanations (urgency, importance, effort)
+        - Exactly two explanations (urgency, importance)
     """
     reasons = []
 
@@ -63,10 +63,10 @@ def score_task(task: Task, now: datetime) -> tuple[float, list[str]]:
     importance = IMPORTANCE.get(task.task_type, IMPORTANCE[TaskType.OTHER])
     reasons.append(f"importance of {task.task_type.value} (+{importance})")
 
-    effort = min(task.estimated_effort_hours, 8)
-    reasons.append(f"estimated effort of {effort} hours (+{effort})")
+    # effort = min(task.estimated_effort_hours, 8)
+    # reasons.append(f"estimated effort of {effort} hours (+{effort})")
 
-    return urgency + importance + effort, reasons
+    return urgency + importance , reasons
 
 def rank_tasks(tasks: list[Task], now: datetime) -> list[RankedTask]:
     
