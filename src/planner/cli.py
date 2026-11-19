@@ -5,13 +5,13 @@ from rich.console import Console
 from rich.table import Table
 
 from planner.review import apply_review_item, dismiss_review_item, review_label
-from planner.storage import connect, get_task, init_db, list_review_items, list_tasks
+from planner.storage import connect, get_task, init_db, list_review_items, list_tasks, get_message, update_task
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 from planner.intelligence.cache import make_cached_llm  
-from planner.models import DecisionAction
+from planner.models import DecisionAction, TaskStatus
 from planner.sources.whatsapp import IST, load_whatsapp_file
 from planner.sync import sync_messages
 from planner.intelligence.priority import STALE_AFTER, is_stale, rank_tasks
@@ -173,3 +173,50 @@ def priorities(
             f"stale tasks hidden: {stale_count} "
             f"(overdue more than {STALE_AFTER.days} days, use --all to show them)"
         )
+@app.command()
+def done(task_id: int):
+    """Mark a task as completed."""
+    conn = open_db()
+    task = get_task(conn, task_id)
+    if task is None:
+        typer.echo(f"No task #{task_id}.", err=True)
+        raise typer.Exit(code=1)
+    if task.status == TaskStatus.COMPLETED:
+        typer.echo(f"Task #{task_id} is already completed.")
+        return
+    if task.status == TaskStatus.CANCELLED:
+        typer.echo(f"Task #{task_id} was cancelled, so it can't be completed.", err=True)
+        raise typer.Exit(code=1)
+    update_task(conn, task.model_copy(update={"status": TaskStatus.COMPLETED}))
+    typer.echo(f"Marked task #{task_id} as completed: {task.title}")
+
+
+@app.command()
+def show(task_id: int):
+    """Show one task and the messages it came from."""
+    conn = open_db()
+    task = get_task(conn, task_id)
+    if task is None:
+        typer.echo(f"No task #{task_id}.", err=True)
+        raise typer.Exit(code=1)
+
+    deadline = "-"
+    if task.deadline:
+        deadline = task.deadline.strftime("%Y-%m-%d %H:%M")
+        if task.deadline_text:
+            deadline += f'  ("{task.deadline_text}")'
+
+    typer.echo(f"#{task.id}  {task.title}")
+    typer.echo(f"  type: {task.task_type.value}")
+    typer.echo(f"  subject: {task.subject or '-'}")
+    typer.echo(f"  status: {task.status.value}")
+    typer.echo(f"  deadline: {deadline}")
+    typer.echo(f"  from {len(task.source_message_ids)} message(s):")
+    for message_id in task.source_message_ids:
+        msg = get_message(conn, message_id)
+        if msg is None:
+            typer.echo(f"    - {message_id} (message not stored)")
+            continue
+        typer.echo(f"    - {msg.timestamp.strftime('%Y-%m-%d %H:%M')}  {msg.source.value}  {msg.sender}")
+        for line in msg.text.splitlines():
+            typer.echo(f"        {line}")
